@@ -7,7 +7,7 @@ Usage:
 
 Examples:
   python run_strategy_cli.py cursorstrategies/futures_mnq_strategy.py \
-    --tickers MNQ --accounts U2211406 --real-trading \
+    --tickers MNQ --accounts U2211406 --real-trading --client-id 7 \
     --params expiry=202509,limit_offset=0.25,stop_loss_points=5.0,take_profit_mult=2.0,use_delayed=false,tif=DAY,limit_timeout=30
 
 Diagnostics:
@@ -79,7 +79,13 @@ def parse_parameters(param_string: str) -> Dict[str, Any]:
     return params
 
 
-async def run_strategy_from_file(strategy_file: str, strategy_filename: str, params: Dict[str, Any], trace_loop: bool = False):
+async def run_strategy_from_file(
+    strategy_file: str,
+    strategy_filename: str,
+    params: Dict[str, Any],
+    trace_loop: bool = False,
+    client_id: int = 19,
+):
     """Run a strategy from a file with the given parameters."""
     try:
         from file_strategy_loader import file_strategy_loader
@@ -106,10 +112,10 @@ async def run_strategy_from_file(strategy_file: str, strategy_filename: str, par
         paper_trading = params.get('paper_trading', True)
         connection_type = "paper" if paper_trading else "real"
 
-        print(f"🔗 Connecting to {connection_type} trading...")
+        print(f"🔗 Connecting to {connection_type} trading (client_id={client_id})...")
 
         # Ensure connection (async)
-        ok = await connection_manager.ensure_connection(connection_type)
+        ok = await connection_manager.ensure_connection(connection_type, client_id=client_id)
         if not ok:
             print(f"❌ Failed to establish {connection_type} trading connection")
             return False
@@ -203,6 +209,9 @@ async def main():
     parser.add_argument('--trace-loop', action='store_true',
                         help='Trace nested run_until_complete calls to locate the culprit')
 
+    parser.add_argument('--client-id', type=int, default=19,
+                        help='IBKR API client ID to use (default: 19)')
+
     args = parser.parse_args()
 
     # Quick diagnostic path (no strategy needed)
@@ -212,7 +221,7 @@ async def main():
 
         await connection_manager.start()
         mode = "real" if args.real_trading else "paper"
-        ok = await connection_manager.ensure_connection(mode)
+        ok = await connection_manager.ensure_connection(mode, client_id=args.client_id)
         if not ok:
             print("❌ diag: connection failed")
             sys.exit(1)
@@ -269,7 +278,13 @@ async def main():
     print("=" * 50)
 
     # Run
-    success = await run_strategy_from_file(args.strategy_file, strategy_filename, params, trace_loop=args.trace_loop)
+    success = await run_strategy_from_file(
+        args.strategy_file,
+        strategy_filename,
+        params,
+        trace_loop=args.trace_loop,
+        client_id=args.client_id,
+    )
 
     if success:
         print("✅ Strategy completed successfully!")

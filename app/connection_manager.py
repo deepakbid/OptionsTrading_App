@@ -19,14 +19,20 @@ class ConnectionManager:
         # Marker; never create/set a new loop here.
         self._started = True
 
-    async def ensure_connection(self, mode: str) -> bool:
+    async def ensure_connection(self, mode: str, client_id: int = 19) -> bool:
+        """Ensure connection to IBKR.
+
+        Parameters
+        ----------
+        mode: str
+            Either ``"paper"`` or ``"real"`` to select the trading environment.
+        client_id: int, optional
+            The client identifier for the IBKR API session. Defaults to ``19``.
         """
-        mode: "paper" or "real"
-        """
-        paper = (mode == "paper")
+        paper = mode == "paper"
         self._mode = mode
 
-        ib = await IBManager.instance().connect(paper=paper, client_id=19)
+        ib = await IBManager.instance().connect(paper=paper, client_id=client_id)
         # Smoke test to guarantee we’re on THIS loop:
         try:
             _ = await ib.reqCurrentTimeAsync()

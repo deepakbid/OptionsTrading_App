@@ -162,6 +162,20 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 3. **Click "Run Strategy"**
 4. **Monitor logs** in real-time
 
+### Running a Strategy from CLI
+
+The project also includes a standalone script, `run_strategy_cli.py`, for executing
+strategies directly from the command line. The script connects to Interactive
+Brokers using a configurable **client ID**. Use the `--client-id` option to
+specify a unique identifier when running multiple IBKR sessions:
+
+```bash
+python run_strategy_cli.py cursorstrategies/futures_mnq_strategy.py \
+    --tickers MNQ --accounts U2211406 --real-trading --client-id 7
+```
+
+If omitted, the client ID defaults to `19`.
+
 ## Strategy Examples
 
 ### Iron Butterfly
