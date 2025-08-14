@@ -1,3 +1,0 @@
-This is a test file to demonstrate the changes viewer working!
-Created at: 2025-08-14
-Purpose: Show Git changes in real-time
