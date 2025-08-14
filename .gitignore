@@ -1,0 +1,148 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+.venv/
+
+# Environment variables and secrets
+.env
+.env.local
+.env.production
+.env.staging
+*.key
+*.pem
+*.p12
+secrets.json
+config.json
+credentials.json
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+strategies.db
+*.mdb
+*.accdb
+
+# Logs
+*.log
+logs/
+log/
+
+# Trading specific
+*.csv
+*.xlsx
+*.xls
+trades/
+positions/
+backtest_results/
+paper_trading_results/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.backup
+*.old
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Python cache
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# pyenv
+.python-version
+
+# pipenv
+Pipfile.lock
+
+# PEP 582
+__pypackages__/
+
+# Celery
+celerybeat-schedule
+celerybeat.pid
+
+# SageMath parsed files
+*.sage.py
+
+# Spyder project settings
+.spyderproject
+.spyproject
+
+# Rope project settings
+.ropeproject
+
+# mkdocs documentation
+/site
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Trading strategy specific exclusions
+# Keep these files in version control:
+# - cursorstrategies/*.py (your strategy files)
+# - app/*.py (your application code)
+# - requirements*.txt (dependencies)
+# - *.md (documentation)
+# - run_strategy_cli.py (CLI runner)
+
+# But exclude:
+# - Any files with API keys or credentials
+# - Database files
+# - Log files
+# - Temporary strategy outputs

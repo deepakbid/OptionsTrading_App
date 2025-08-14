@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Simple React Test</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body>
+    <div id="root">Loading...</div>
+    
+    <script type="text/babel">
+        console.log('Simple test starting...');
+        
+        function SimpleTest() {
+            return React.createElement('div', null, 
+                React.createElement('h1', null, 'Simple React Test'),
+                React.createElement('p', null, 'If you see this, React is working!'),
+                React.createElement('button', {
+                    onClick: () => alert('Button clicked!')
+                }, 'Click Me!')
+            );
+        }
+        
+        try {
+            ReactDOM.render(React.createElement(SimpleTest), document.getElementById('root'));
+            console.log('Simple test rendered successfully!');
+        } catch (e) {
+            console.error('Error in simple test:', e);
+            document.getElementById('root').innerHTML = 'Error: ' + e.message;
+        }
+    </script>
+</body>
+</html>

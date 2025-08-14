@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+
+{% block title %}{{ strategy.name }} - Options Strategy Web App{% endblock %}
+
+{% block content %}
+<div class="strategy-detail-container">
+    <div class="strategy-header">
+        <h2>{{ strategy.name }}</h2>
+        {% if strategy.description %}
+            <p class="description">{{ strategy.description }}</p>
+        {% endif %}
+        <a href="/strategies/" class="btn btn-secondary">← Back to Strategies</a>
+    </div>
+
+    <div class="strategy-controls">
+        <h3>🚀 Strategy Controls</h3>
+        {% if is_running %}
+            <div class="running-status">
+                <span class="status-badge running">🟢 Running</span>
+                <a href="/strategies/stop/{{ strategy.id }}" class="btn btn-danger">Stop Strategy</a>
+            </div>
+        {% else %}
+            <div class="stopped-status">
+                <span class="status-badge stopped">🔴 Stopped</span>
+                <form action="/strategies/run/{{ strategy.id }}" method="post" class="run-form">
+                    <div class="form-group">
+                        <label for="params">Parameters (JSON):</label>
+                        <textarea id="params" name="params" rows="4" placeholder='{"symbol": "SPX", "expiry": "2025-08-08", "strike": 5000, "qty": 1}'></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Run Strategy</button>
+                </form>
+            </div>
+        {% endif %}
+    </div>
+
+    <div class="strategy-code">
+        <h3>📝 Strategy Code</h3>
+        <pre><code>{{ strategy.code }}</code></pre>
+    </div>
+
+    <div class="strategy-logs">
+        <h3>📊 Execution Logs</h3>
+        <div id="logs-container" class="logs-container">
+            {% if logs %}
+                {% for log in logs %}
+                    <div class="log-entry">{{ log }}</div>
+                {% endfor %}
+            {% else %}
+                <p class="no-logs">No logs yet. Run the strategy to see execution logs.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+// Auto-refresh logs if strategy is running
+{% if is_running %}
+function refreshLogs() {
+    fetch('/strategies/logs/{{ strategy.id }}')
+        .then(response => response.json())
+        .then(data => {
+            const logsContainer = document.getElementById('logs-container');
+            if (data.logs.length > 0) {
+                logsContainer.innerHTML = data.logs.map(log => 
+                    `<div class="log-entry">${log}</div>`
+                ).join('');
+            }
+            
+            // Stop refreshing if strategy is no longer running
+            if (!data.is_running) {
+                location.reload();
+            }
+        })
+        .catch(error => console.error('Error refreshing logs:', error));
+}
+
+// Refresh logs every 2 seconds
+setInterval(refreshLogs, 2000);
+{% endif %}
+</script>
+{% endblock %}

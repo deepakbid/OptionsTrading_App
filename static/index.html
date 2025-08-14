@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Options Trader</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div id="root">
+        <div style="padding: 20px; text-align: center; font-family: Arial, sans-serif;">
+            <h1>Loading Options Trader...</h1>
+            <p>Please wait while the application initializes.</p>
+        </div>
+    </div>
+    
+    <script type="text/babel">
+        console.log('=== React Script Starting ===');
+        
+        // Error Boundary Component
+        class ErrorBoundary extends React.Component {
+            constructor(props) {
+                super(props);
+                this.state = { hasError: false, error: null };
+            }
+            
+            static getDerivedStateFromError(error) {
+                return { hasError: true, error };
+            }
+            
+            componentDidCatch(error, errorInfo) {
+                console.error('Error caught by boundary:', error, errorInfo);
+            }
+            
+            render() {
+                if (this.state.hasError) {
+                    return (
+                        <div style={{ padding: '20px', color: 'red', fontFamily: 'Arial, sans-serif' }}>
+                            <h1>Something went wrong!</h1>
+                            <p>An error occurred while rendering the application.</p>
+                            <details>
+                                <summary>Error Details</summary>
+                                <pre>{this.state.error && this.state.error.toString()}</pre>
+                            </details>
+                            <button onClick={() => window.location.reload()}>Reload Page</button>
+                        </div>
+                    );
+                }
+                
+                return this.props.children;
+            }
+        }
+        
+        // Simple Loading Component
+        function LoadingComponent() {
+            return (
+                <div style={{ padding: '20px', textAlign: 'center', fontFamily: 'Arial, sans-serif' }}>
+                    <h2>Loading Options Trader...</h2>
+                    <p>Please wait while we initialize the application.</p>
+                </div>
+            );
+        }
+        
+        // Main App Component (Simplified)
+        function OptionsTraderApp() {
+            const [isLoading, setIsLoading] = React.useState(true);
+            const [error, setError] = React.useState(null);
+            const [strategies, setStrategies] = React.useState([]);
+            
+            React.useEffect(() => {
+                loadStrategies();
+            }, []);
+            
+            const loadStrategies = async () => {
+                try {
+                    setIsLoading(true);
+                    const response = await fetch('/strategies/api/strategies');
+                    if (response.ok) {
+                        const data = await response.json();
+                        setStrategies(data);
+                        console.log('Strategies loaded:', data);
+                    } else {
+                        console.error('Failed to load strategies:', response.status);
+                        setError('Failed to load strategies from server');
+                    }
+                } catch (error) {
+                    console.error('Error loading strategies:', error);
+                    setError('Network error while loading strategies');
+                } finally {
+                    setIsLoading(false);
+                }
+            };
+            
+            if (isLoading) {
+                return <LoadingComponent />;
+            }
+            
+            if (error) {
+                return (
+                    <div style={{ padding: '20px', color: 'red', fontFamily: 'Arial, sans-serif' }}>
+                        <h2>Error Loading Application</h2>
+                        <p>{error}</p>
+                        <button onClick={loadStrategies}>Retry</button>
+                    </div>
+                );
+            }
+            
+            return (
+                <div className="dashboard-container">
+                    {/* Left Sidebar */}
+                    <nav className="sidebar">
+                        <div className="sidebar-header">
+                            <div className="logo">
+                                <span className="logo-icon">📈</span>
+                                <span className="logo-text">Options Trader</span>
+                            </div>
+                        </div>
+                        <ul className="sidebar-nav">
+                            <li className="sidebar-item active">
+                                <span className="item-icon">📊</span>
+                                <span className="item-name">Strategies</span>
+                            </li>
+                            <li className="sidebar-item">
+                                <span className="item-icon">🚀</span>
+                                <span className="item-name">Deployments</span>
+                            </li>
+                            <li className="sidebar-item">
+                                <span className="item-icon">🔄</span>
+                                <span className="item-name">Task Manager</span>
+                            </li>
+                        </ul>
+                    </nav>
+
+                    {/* Main Content */}
+                    <main className="main-content">
+                        <h1>Options Trading Dashboard</h1>
+                        
+                        <div className="strategies-section">
+                            <h2>Your Strategies ({strategies.length})</h2>
+                            
+                            {strategies.length === 0 ? (
+                                <div className="no-strategies">
+                                    <p>No strategies found. Create your first strategy to get started!</p>
+                                </div>
+                            ) : (
+                                <div className="strategies-grid">
+                                    {strategies.map(strategy => (
+                                        <div key={strategy.id} className="strategy-card">
+                                            <h3>{strategy.name}</h3>
+                                            <p><strong>Description:</strong> {strategy.description || 'No description'}</p>
+                                            <p><strong>ID:</strong> {strategy.id}</p>
+                                            <p><strong>Updated:</strong> {new Date(strategy.updated_at).toLocaleDateString()}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                        
+                        <div className="status-section">
+                            <h2>System Status</h2>
+                            <p>✅ Application is running</p>
+                            <p>✅ React is working</p>
+                            <p>✅ API connection established</p>
+                            <p>✅ {strategies.length} strategies loaded</p>
+                        </div>
+                        
+                        <div className="next-steps">
+                            <h2>Next Steps</h2>
+                            <p>This is a simplified version of the Options Trader application. The full version with all features is being loaded.</p>
+                            <p>If you need the full functionality, please check the console for any errors and let us know what you see.</p>
+                        </div>
+                    </main>
+                </div>
+            );
+        }
+        
+        // Render the app with error boundary
+        console.log('=== About to render OptionsTraderApp ===');
+        const rootElement = document.getElementById('root');
+        console.log('Root element:', rootElement);
+        
+        if (rootElement) {
+            try {
+                ReactDOM.render(
+                    <ErrorBoundary>
+                        <OptionsTraderApp />
+                    </ErrorBoundary>,
+                    rootElement
+                );
+                console.log('=== OptionsTraderApp rendered successfully ===');
+            } catch (error) {
+                console.error('Error rendering app:', error);
+                rootElement.innerHTML = `
+                    <div style="padding: 20px; color: red; font-family: Arial, sans-serif;">
+                        <h1>Fatal Error:</h1>
+                        <p>Failed to render the application: ${error.message}</p>
+                        <button onclick="window.location.reload()">Reload Page</button>
+                    </div>
+                `;
+            }
+        } else {
+            console.error('Root element not found!');
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block title %}Strategies - Options Strategy Web App{% endblock %}
+
+{% block content %}
+<div class="strategies-container">
+    <div class="add-strategy-section">
+        <h2>➕ Add New Strategy</h2>
+        <form action="/strategies/create" method="post" class="strategy-form">
+            <div class="form-group">
+                <label for="name">Strategy Name:</label>
+                <input type="text" id="name" name="name" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="description">Description:</label>
+                <textarea id="description" name="description" rows="2"></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label for="code">Strategy Code:</label>
+                <textarea id="code" name="code" rows="15" required placeholder="from strategies.base import Strategy
+from ib_insync import Option, MarketOrder
+from app.ib_adapter import qualify, place_order, wait_for_completion
+
+class MyStrategy(Strategy):
+    name = 'My Strategy'
+    
+    async def run(self, ib, params, log):
+        log('Starting strategy...')
+        # Your strategy code here
+        log('Strategy completed')"></textarea>
+            </div>
+            
+            <button type="submit" class="btn btn-primary">Create Strategy</button>
+        </form>
+    </div>
+
+    <div class="strategies-list-section">
+        <h2>📋 Saved Strategies</h2>
+        {% if strategies %}
+            <div class="strategies-grid">
+                {% for strategy in strategies %}
+                <div class="strategy-card">
+                    <h3>{{ strategy.name }}</h3>
+                    {% if strategy.description %}
+                        <p class="description">{{ strategy.description }}</p>
+                    {% endif %}
+                    <div class="strategy-actions">
+                        <a href="/strategies/detail/{{ strategy.id }}" class="btn btn-secondary">View Details</a>
+                        <a href="/strategies/delete/{{ strategy.id }}" class="btn btn-danger" 
+                           onclick="return confirm('Are you sure you want to delete this strategy?')">Delete</a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p class="no-strategies">No strategies found. Create your first strategy above!</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

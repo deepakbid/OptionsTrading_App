@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stripped Test - Options Trader</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div id="root">
+        <p>Loading...</p>
+    </div>
+    
+    <script type="text/babel">
+        console.log('=== Stripped Test Starting ===');
+        
+        try {
+            const { useState, useEffect } = React;
+            console.log('React hooks loaded successfully');
+            
+            function StrippedOptionsTrader() {
+                console.log('StrippedOptionsTrader component rendering...');
+                
+                const [activeTab, setActiveTab] = useState('strategies');
+                
+                const switchTab = (tabName) => {
+                    console.log('Switching to tab:', tabName);
+                    setActiveTab(tabName);
+                };
+                
+                return (
+                    <div style={{padding: '20px', fontFamily: 'Arial, sans-serif'}}>
+                        <h1>Stripped Options Trader</h1>
+                        
+                        {/* Tab Navigation */}
+                        <div style={{display: 'flex', gap: '10px', marginBottom: '20px'}}>
+                            <button 
+                                style={{
+                                    padding: '10px 20px',
+                                    backgroundColor: activeTab === 'strategies' ? '#3b82f6' : '#e5e7eb',
+                                    color: activeTab === 'strategies' ? 'white' : 'black',
+                                    border: 'none',
+                                    borderRadius: '5px',
+                                    cursor: 'pointer'
+                                }}
+                                onClick={() => switchTab('strategies')}
+                            >
+                                📊 Strategies
+                            </button>
+                            <button 
+                                style={{
+                                    padding: '10px 20px',
+                                    backgroundColor: activeTab === 'deployments' ? '#3b82f6' : '#e5e7eb',
+                                    color: activeTab === 'deployments' ? 'white' : 'black',
+                                    border: 'none',
+                                    borderRadius: '5px',
+                                    cursor: 'pointer'
+                                }}
+                                onClick={() => switchTab('deployments')}
+                            >
+                                🚀 Deployments
+                            </button>
+                        </div>
+                        
+                        {/* Tab Content */}
+                        {activeTab === 'strategies' && (
+                            <div>
+                                <h2>📊 Strategies Tab</h2>
+                                <p>This is the strategies tab content.</p>
+                            </div>
+                        )}
+                        
+                        {activeTab === 'deployments' && (
+                            <div>
+                                <h2>🚀 Deployments Tab</h2>
+                                <p>This is the deployments tab content.</p>
+                            </div>
+                        )}
+                        
+                        <hr style={{margin: '20px 0'}} />
+                        <p>✅ If you can see this, the stripped version works!</p>
+                    </div>
+                );
+            }
+            
+            console.log('About to render StrippedOptionsTrader...');
+            const rootElement = document.getElementById('root');
+            console.log('Root element:', rootElement);
+            
+            if (!rootElement) {
+                throw new Error('Root element not found!');
+            }
+            
+            ReactDOM.render(<StrippedOptionsTrader />, rootElement);
+            console.log('StrippedOptionsTrader rendered successfully!');
+            
+        } catch (error) {
+            console.error('Fatal error in stripped test:', error);
+            document.getElementById('root').innerHTML = `
+                <div style="padding: 20px; color: red; font-family: Arial, sans-serif;">
+                    <h1>Fatal Error:</h1>
+                    <pre>${error.toString()}</pre>
+                    <h2>Stack Trace:</h2>
+                    <pre>${error.stack}</pre>
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html>

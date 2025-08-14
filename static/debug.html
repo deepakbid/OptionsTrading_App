@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Test</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body>
+    <div id="root"></div>
+    
+    <script type="text/babel">
+        console.log('=== Debug Test Starting ===');
+        console.log('React version:', React.version);
+        console.log('ReactDOM version:', ReactDOM.version);
+        
+        function TestComponent() {
+            console.log('TestComponent rendering...');
+            return React.createElement('div', {
+                style: {
+                    padding: '20px',
+                    backgroundColor: '#f0f0f0',
+                    border: '2px solid #333',
+                    margin: '20px'
+                }
+            }, [
+                React.createElement('h1', { key: 'title' }, 'Debug Test - React is Working!'),
+                React.createElement('p', { key: 'status' }, 'If you can see this, React is rendering correctly.'),
+                React.createElement('p', { key: 'time' }, 'Current time: ' + new Date().toLocaleString()),
+                React.createElement('button', { 
+                    key: 'button',
+                    onClick: () => alert('Button clicked! React events are working!')
+                }, 'Click Me!')
+            ]);
+        }
+        
+        console.log('About to render TestComponent...');
+        const rootElement = document.getElementById('root');
+        console.log('Root element:', rootElement);
+        
+        if (rootElement) {
+            ReactDOM.render(React.createElement(TestComponent), rootElement);
+            console.log('TestComponent rendered successfully!');
+        } else {
+            console.error('Root element not found!');
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎯 Trading Strategy Changes Viewer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            color: #667eea;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            color: #666;
+            margin-bottom: 20px;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 25px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin: 5px;
+        }
+
+        .status-git {
+            background: #28a745;
+            color: white;
+        }
+
+        .status-no-git {
+            background: #dc3545;
+            color: white;
+        }
+
+        .refresh-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 10px;
+        }
+
+        .refresh-btn:hover {
+            background: #5a6fd8;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+        }
+
+        .card h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+            border-bottom: 2px solid #f0f0f0;
+            padding-bottom: 10px;
+        }
+
+        .file-list {
+            list-style: none;
+        }
+
+        .file-item {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-left: 4px solid #667eea;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .file-item:hover {
+            background: #e9ecef;
+            transform: translateX(5px);
+        }
+
+        .file-item.modified {
+            border-left-color: #ffc107;
+        }
+
+        .file-item.added {
+            border-left-color: #28a745;
+        }
+
+        .file-item.deleted {
+            border-left-color: #dc3545;
+        }
+
+        .file-item.untracked {
+            border-left-color: #6c757d;
+        }
+
+        .file-name {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .file-status {
+            font-size: 0.8rem;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .commit-item {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-left: 4px solid #667eea;
+        }
+
+        .commit-hash {
+            font-family: monospace;
+            background: #e9ecef;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+        }
+
+        .commit-message {
+            font-weight: 600;
+            margin: 8px 0;
+            color: #333;
+        }
+
+        .commit-meta {
+            font-size: 0.8rem;
+            color: #666;
+        }
+
+        .diff-viewer {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            margin-top: 30px;
+            display: none;
+        }
+
+        .diff-content {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 20px;
+            border-radius: 10px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            overflow-x: auto;
+            white-space: pre-wrap;
+        }
+
+        .diff-line {
+            padding: 2px 0;
+        }
+
+        .diff-line.added {
+            background: #0d1117;
+            color: #7ee787;
+        }
+
+        .diff-line.removed {
+            background: #0d1117;
+            color: #f85149;
+        }
+
+        .diff-line.context {
+            color: #8b949e;
+        }
+
+        .close-btn {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            float: right;
+            margin-bottom: 20px;
+        }
+
+        .close-btn:hover {
+            background: #c82333;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid #f5c6cb;
+            margin: 20px 0;
+        }
+
+        .success {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid #c3e6cb;
+            margin: 20px 0;
+        }
+
+        @media (max-width: 768px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎯 Trading Strategy Changes Viewer</h1>
+            <p>Track all modifications to your trading strategies in real-time</p>
+            
+            {% if git_status.error %}
+                <div class="status-badge status-no-git">
+                    ⚠️ {{ git_status.error }}
+                </div>
+            {% else %}
+                <div class="status-badge status-git">
+                    ✅ Git Repository Active
+                </div>
+            {% endif %}
+            
+            <button class="refresh-btn" onclick="refreshData()">
+                🔄 Refresh Changes
+            </button>
+            
+            <div class="status-badge">
+                🕐 Last Updated: {{ current_time }}
+            </div>
+        </div>
+
+        {% if git_status.error %}
+            <div class="error">
+                <strong>Git Not Available:</strong> {{ git_status.error }}
+                <br><br>
+                To use this changes viewer:
+                <ol>
+                    <li>Install Git from <a href="https://git-scm.com/download/win" target="_blank">https://git-scm.com/download/win</a></li>
+                    <li>Initialize Git in your project: <code>git init</code></li>
+                    <li>Make your first commit: <code>git add . && git commit -m "Initial commit"</code></li>
+                    <li>Refresh this page</li>
+                </ol>
+            </div>
+        {% else %}
+            <div class="grid">
+                <div class="card">
+                    <h2>📊 Current Changes</h2>
+                    
+                    {% if git_status.modified %}
+                        <h3 style="color: #ffc107; margin: 15px 0;">Modified Files</h3>
+                        <ul class="file-list">
+                            {% for file in git_status.modified %}
+                                <li class="file-item modified" onclick="showDiff('{{ file }}')">
+                                    <div class="file-name">{{ file }}</div>
+                                    <div class="file-status">Modified - Click to view changes</div>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
+                    
+                    {% if git_status.added %}
+                        <h3 style="color: #28a745; margin: 15px 0;">New Files</h3>
+                        <ul class="file-list">
+                            {% for file in git_status.added %}
+                                <li class="file-item added" onclick="showContent('{{ file }}')">
+                                    <div class="file-name">{{ file }}</div>
+                                    <div class="file-status">Added - Click to view content</div>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
+                    
+                    {% if git_status.deleted %}
+                        <h3 style="color: #dc3545; margin: 15px 0;">Deleted Files</h3>
+                        <ul class="file-list">
+                            {% for file in git_status.deleted %}
+                                <li class="file-item deleted">
+                                    <div class="file-name">{{ file }}</div>
+                                    <div class="file-status">Deleted</div>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
+                    
+                    {% if git_status.untracked %}
+                        <h3 style="color: #6c757d; margin: 15px 0;">Untracked Files</h3>
+                        <ul class="file-list">
+                            {% for file in git_status.untracked %}
+                                <li class="file-item untracked" onclick="showContent('{{ file }}')">
+                                    <div class="file-name">{{ file }}</div>
+                                    <div class="file-status">Untracked - Click to view content</div>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
+                    
+                    {% if not git_status.modified and not git_status.added and not git_status.deleted and not git_status.untracked %}
+                        <div class="success">
+                            🎉 No changes detected! Your working directory is clean.
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div class="card">
+                    <h2>📝 Recent Commits</h2>
+                    
+                    {% if commit_history %}
+                        {% for commit in commit_history %}
+                            <div class="commit-item">
+                                <div class="commit-hash">{{ commit.hash }}</div>
+                                <div class="commit-message">{{ commit.message }}</div>
+                                <div class="commit-meta">
+                                    By {{ commit.author }} on {{ commit.date }}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="loading">
+                            No commits found. Make your first commit to see history here!
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div id="diffViewer" class="diff-viewer">
+                <button class="close-btn" onclick="hideDiff()">✕ Close</button>
+                <h2 id="diffTitle">File Changes</h2>
+                <div id="diffContent" class="diff-content">
+                    <div class="loading">Loading changes...</div>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+
+    <script>
+        function refreshData() {
+            location.reload();
+        }
+
+        function showDiff(filename) {
+            const diffViewer = document.getElementById('diffViewer');
+            const diffTitle = document.getElementById('diffTitle');
+            const diffContent = document.getElementById('diffContent');
+            
+            diffTitle.textContent = `Changes in ${filename}`;
+            diffContent.innerHTML = '<div class="loading">Loading changes...</div>';
+            diffViewer.style.display = 'block';
+            
+            fetch(`/changes/diff/${encodeURIComponent(filename)}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.diff) {
+                        diffContent.innerHTML = formatDiff(data.diff);
+                    } else {
+                        diffContent.innerHTML = '<div class="error">No changes found for this file</div>';
+                    }
+                })
+                .catch(error => {
+                    diffContent.innerHTML = '<div class="error">Error loading changes: ' + error.message + '</div>';
+                });
+        }
+
+        function showContent(filename) {
+            const diffViewer = document.getElementById('diffViewer');
+            const diffTitle = document.getElementById('diffTitle');
+            const diffContent = document.getElementById('diffContent');
+            
+            diffTitle.textContent = `Content of ${filename}`;
+            diffContent.innerHTML = '<div class="loading">Loading content...</div>';
+            diffViewer.style.display = 'block';
+            
+            fetch(`/changes/content/${encodeURIComponent(filename)}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.content) {
+                        diffContent.innerHTML = `<pre style="color: #d4d4d4;">${escapeHtml(data.content)}</pre>`;
+                    } else {
+                        diffContent.innerHTML = '<div class="error">Could not load file content</div>';
+                    }
+                })
+                .catch(error => {
+                    diffContent.innerHTML = '<div class="error">Error loading content: ' + error.message + '</div>';
+                });
+        }
+
+        function hideDiff() {
+            document.getElementById('diffViewer').style.display = 'none';
+        }
+
+        function formatDiff(diffText) {
+            const lines = diffText.split('\n');
+            let html = '';
+            
+            lines.forEach(line => {
+                let className = 'diff-line context';
+                if (line.startsWith('+')) {
+                    className = 'diff-line added';
+                } else if (line.startsWith('-')) {
+                    className = 'diff-line removed';
+                }
+                
+                html += `<div class="${className}">${escapeHtml(line)}</div>`;
+            });
+            
+            return html;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Auto-refresh every 30 seconds
+        setInterval(refreshData, 30000);
+    </script>
+</body>
+</html>

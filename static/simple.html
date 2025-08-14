@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Options Trader</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div id="root"></div>
+    
+    <script type="text/babel">
+        console.log('=== Full Options Trader App Starting ===');
+        const { useState, useEffect } = React;
+        
+        function OptionsTraderApp() {
+            const [strategies, setStrategies] = useState([]);
+            const [selectedStrategy, setSelectedStrategy] = useState(null);
+            const [loading, setLoading] = useState(true);
+            const [activeTab, setActiveTab] = useState('strategies');
+            const [deployments, setDeployments] = useState([]);
+            const [runningTasks, setRunningTasks] = useState({});
+            const [connectionStatus, setConnectionStatus] = useState({
+                connected: false,
+                mode: 'paper',
+                type: 'paper',
+                port: null,
+                accounts: []
+            });
+            const [selectedAccounts, setSelectedAccounts] = useState([]);
+            const [isLoadingAccounts, setIsLoadingAccounts] = useState(false);
+            
+            useEffect(() => {
+                loadStrategies();
+                loadDeployments();
+                loadRunningTasks();
+                
+                // Set up interval to refresh running tasks every 5 seconds
+                const interval = setInterval(loadRunningTasks, 5000);
+                return () => clearInterval(interval);
+            }, []);
+            
+            const loadStrategies = async () => {
+                try {
+                    setLoading(true);
+                    const response = await fetch('/strategies/api/strategies');
+                    if (response.ok) {
+                        const data = await response.json();
+                        setStrategies(data);
+                        if (data.length > 0) {
+                            setSelectedStrategy(data[0]);
+                        }
+                        console.log('Strategies loaded:', data);
+                    } else {
+                        console.error('Failed to load strategies:', response.status);
+                    }
+                } catch (error) {
+                    console.error('Error loading strategies:', error);
+                } finally {
+                    setLoading(false);
+                }
+            };
+            
+            const loadDeployments = async () => {
+                try {
+                    const response = await fetch('/strategies/api/deployments');
+                    if (response.ok) {
+                        const data = await response.json();
+                        setDeployments(data);
+                        console.log('Deployments loaded:', data);
+                    } else {
+                        console.error('Failed to load deployments:', response.status);
+                    }
+                } catch (error) {
+                    console.error('Error loading deployments:', error);
+                }
+            };
+            
+            const loadRunningTasks = async () => {
+                try {
+                    const response = await fetch('/strategies/api/tasks/running');
+                    if (response.ok) {
+                        const data = await response.json();
+                        setRunningTasks(data);
+                        console.log('Running tasks loaded:', data);
+                        
+                        // Debug: Log the structure of each task
+                        if (data.tasks) {
+                            Object.entries(data.tasks).forEach(([sid, task]) => {
+                                console.log(`Task ${sid}:`, task);
+                                console.log(`Task strategy_id:`, task.strategy_id);
+                                console.log(`Task keys:`, Object.keys(task));
+                            });
+                        }
+                    } else {
+                        console.error('Failed to load running tasks:', response.status);
+                    }
+                } catch (error) {
+                    console.error('Error loading running tasks:', error);
+                }
+            };
+            
+            const loadAccountsFromIBKR = async () => {
+                setIsLoadingAccounts(true);
+                try {
+                    const response = await fetch('/accounts/');
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data.success && data.accounts.length > 0) {
+                            const accountsWithSelection = data.accounts.map((acc, index) => ({
+                                ...acc,
+                                selected: index === 0
+                            }));
+                            setSelectedAccounts(accountsWithSelection);
+                            setConnectionStatus(prev => ({
+                                ...prev,
+                                accounts: data.accounts
+                            }));
+                        }
+                    } else {
+                        console.error('Failed to load accounts:', response.status);
+                    }
+                } catch (error) {
+                    console.error('Error loading accounts:', error);
+                } finally {
+                    setIsLoadingAccounts(false);
+                }
+            };
+            
+            const connectToIBKR = async (paperTrading = true) => {
+                try {
+                    setIsLoadingAccounts(true);
+                    const response = await fetch('/accounts/connect', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ paper_trading: paperTrading })
+                    });
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data.success) {
+                            setConnectionStatus({ 
+                                connected: true, 
+                                type: data.connection_type,
+                                port: paperTrading ? '7497' : '7496',
+                                mode: paperTrading ? 'paper' : 'live',
+                                message: data.message
+                            });
+                            await loadAccountsFromIBKR();
+                        } else {
+                            alert(`Connection failed: ${data.message}`);
+                        }
+                    } else {
+                        alert('Connection request failed');
+                    }
+                } catch (error) {
+                    console.error('Error connecting to IBKR:', error);
+                    alert(`Connection error: ${error.message}`);
+                } finally {
+                    setIsLoadingAccounts(false);
+                }
+            };
+            
+            const disconnectFromIBKR = async () => {
+                try {
+                    const response = await fetch('/accounts/disconnect', {
+                        method: 'POST'
+                    });
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data.success) {
+                            setConnectionStatus({ 
+                                connected: false, 
+                                type: null,
+                                port: null,
+                                mode: null,
+                                message: null
+                            });
+                            setSelectedAccounts([]);
+                        } else {
+                            alert(`Disconnection failed: ${data.message}`);
+                        }
+                    } else {
+                        alert('Disconnection request failed');
+                    }
+                } catch (error) {
+                    console.error('Error disconnecting from IBKR:', error);
+                    alert(`Disconnection error: ${error.message}`);
+                }
+            };
+            
+            const deployStrategy = async (strategy) => {
+                if (!connectionStatus.connected) {
+                    alert('Please connect to IBKR first before deploying a strategy.');
+                    return;
+                }
+
+                const selectedAccountsList = selectedAccounts.filter(acc => acc.selected);
+                if (selectedAccountsList.length === 0) {
+                    alert('Please select at least one account to deploy the strategy.');
+                    return;
+                }
+
+                if (!strategy.tickers || strategy.tickers.trim() === '') {
+                    alert('Please enter tickers for the strategy before deploying.');
+                    return;
+                }
+
+                try {
+                    const response = await fetch(`/strategies/api/strategies/${strategy.id}/deploy`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            selected_accounts: selectedAccountsList.map(acc => acc.id),
+                            paper_trading: connectionStatus.type === 'paper',
+                            tickers: strategy.tickers.trim()
+                        })
+                    });
+
+                    if (response.ok) {
+                        const result = await response.json();
+                        if (result.success) {
+                            alert(`✅ Strategy deployed successfully!\n\nStrategy: ${result.strategy_name}\nTickers: ${result.tickers}\nAccounts: ${result.accounts.join(', ')}\nTrading Type: ${result.trading_type}\n\nTask ID: ${result.task_id}`);
+                            loadDeployments();
+                            loadRunningTasks();
+                        } else {
+                            alert(`❌ Deployment failed: ${result.error}`);
+                        }
+                    } else {
+                        alert('Failed to deploy strategy. Please check the console for details.');
+                    }
+                } catch (error) {
+                    console.error('Error deploying strategy:', error);
+                    alert(`Error deploying strategy: ${error.message}`);
+                }
+            };
+            
+            const stopTask = async (strategyId) => {
+                console.log('=== stopTask function called ===');
+                console.log('stopTask called with strategyId:', strategyId);
+                console.log('Type of strategyId:', typeof strategyId);
+                console.log('StrategyId value:', strategyId);
+                
+                if (!strategyId) {
+                    alert('Error: Strategy ID is undefined. Cannot stop strategy.');
+                    return;
+                }
+
+                if (!confirm(`Are you sure you want to stop strategy ${strategyId}?`)) {
+                    console.log('User cancelled the stop operation');
+                    return;
+                }
+
+                try {
+                    console.log(`Attempting to stop strategy ${strategyId}...`);
+                    const url = `/strategies/api/strategies/${strategyId}/stop`;
+                    console.log('Making request to:', url);
+                    
+                    const response = await fetch(url, {
+                        method: 'GET'
+                    });
+                    
+                    console.log('Response status:', response.status);
+                    console.log('Response ok:', response.ok);
+
+                    if (response.ok) {
+                        console.log('Strategy stopped successfully');
+                        alert(`Strategy ${strategyId} stopped successfully`);
+                        loadRunningTasks();
+                        loadDeployments();
+                    } else {
+                        console.log('Response not ok, trying to get error details');
+                        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+                        console.log('Error data:', errorData);
+                        alert(`Failed to stop strategy ${strategyId}: ${errorData.error || 'Unknown error'}`);
+                    }
+                } catch (error) {
+                    console.error('Error stopping strategy:', error);
+                    console.error('Error details:', error.message, error.stack);
+                    alert(`Error stopping strategy: ${error.message}`);
+                }
+            };
+
+            const viewDeploymentLogs = async (strategyId) => {
+                try {
+                    const response = await fetch(`/strategies/api/strategies/${strategyId}/logs`);
+                    if (response.ok) {
+                        const data = await response.json();
+                        const logs = data.logs || [];
+                        
+                        if (logs.length === 0) {
+                            alert('No logs available for this strategy.');
+                        } else {
+                            // Create a formatted log display
+                            const logText = logs.join('\n');
+                            const logWindow = window.open('', '_blank', 'width=800,height=600');
+                            logWindow.document.write(`
+                                <html>
+                                <head>
+                                    <title>Strategy Logs - Strategy ${strategyId}</title>
+                                    <style>
+                                        body { font-family: monospace; padding: 20px; background: #f5f5f5; }
+                                        .log-header { background: #333; color: white; padding: 15px; margin: -20px -20px 20px -20px; }
+                                        .log-content { background: white; padding: 20px; border-radius: 5px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+                                        .log-entry { margin: 5px 0; padding: 5px; border-left: 3px solid #007acc; }
+                                        .timestamp { color: #666; font-weight: bold; }
+                                        .message { color: #333; }
+                                    </style>
+                                </head>
+                                <body>
+                                    <div class="log-header">
+                                        <h2>📋 Strategy Logs</h2>
+                                        <p>Strategy ID: ${strategyId}</p>
+                                    </div>
+                                    <div class="log-content">
+                                        ${logs.map(log => {
+                                            const timestamp = log.match(/\[(.*?)\]/);
+                                            const message = log.replace(/\[.*?\]/, '').trim();
+                                            return `
+                                                <div class="log-entry">
+                                                    <span class="timestamp">${timestamp ? timestamp[1] : ''}</span>
+                                                    <span class="message">${message}</span>
+                                                </div>
+                                            `;
+                                        }).join('')}
+                                    </div>
+                                </body>
+                                </html>
+                            `);
+                            logWindow.document.close();
+                        }
+                    } else {
+                        alert('Failed to load logs for this strategy.');
+                    }
+                } catch (error) {
+                    console.error('Error loading logs:', error);
+                    alert(`Error loading logs: ${error.message}`);
+                }
+            };
+
+            const startStrategy = async (strategyId) => {
+                try {
+                    // Get the strategy details first
+                    const strategyResponse = await fetch(`/strategies/api/strategies/${strategyId}`);
+                    if (!strategyResponse.ok) {
+                        alert('Failed to get strategy details');
+                        return;
+                    }
+                    
+                    const strategy = await strategyResponse.json();
+                    
+                    // Check if we have a connection
+                    if (!connectionStatus.connected) {
+                        alert('Please connect to IBKR first before starting a strategy.');
+                        return;
+                    }
+
+                    // Check if we have selected accounts
+                    if (selectedAccounts.filter(acc => acc.selected).length === 0) {
+                        alert('Please select at least one account to start the strategy.');
+                        return;
+                    }
+
+                    // Check if we have tickers
+                    if (!strategy.tickers || strategy.tickers.trim() === '') {
+                        alert('Please set tickers for the strategy before starting it.');
+                        return;
+                    }
+
+                    // Deploy the strategy
+                    const response = await fetch(`/strategies/api/strategies/${strategyId}/deploy`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            selected_accounts: selectedAccounts.filter(acc => acc.selected).map(acc => acc.id),
+                            paper_trading: connectionStatus.type === 'paper',
+                            tickers: strategy.tickers.trim()
+                        })
+                    });
+
+                    if (response.ok) {
+                        const result = await response.json();
+                        if (result.success) {
+                            alert(`✅ Strategy started successfully!\n\nStrategy: ${result.strategy_name}\nTickers: ${result.tickers}\nAccounts: ${result.accounts.join(', ')}\nTrading Type: ${result.trading_type}`);
+                            loadDeployments();
+                            loadRunningTasks();
+                        } else {
+                            alert(`❌ Failed to start strategy: ${result.error}`);
+                        }
+                    } else {
+                        alert('Failed to start strategy. Please check the console for details.');
+                    }
+                } catch (error) {
+                    console.error('Error starting strategy:', error);
+                    alert(`Error starting strategy: ${error.message}`);
+                }
+            };
+            
+            if (loading) {
+                return (
+                    <div style={{ padding: '20px', textAlign: 'center' }}>
+                        <h2>Loading...</h2>
+                        <p>Please wait while we load your strategies.</p>
+                    </div>
+                );
+            }
+            
+            return (
+                <div className="dashboard-container">
+                    {/* Left Sidebar */}
+                    <nav className="sidebar">
+                        <div className="sidebar-header">
+                            <div className="logo">
+                                <span className="logo-icon">📈</span>
+                                <span className="logo-text">Options Trader</span>
+                            </div>
+                        </div>
+                        <ul className="sidebar-nav">
+                            <li className={`sidebar-item ${activeTab === 'strategies' ? 'active' : ''}`}>
+                                <span className="item-icon">📊</span>
+                                <span className="item-name">Strategies</span>
+                            </li>
+                            <li className={`sidebar-item ${activeTab === 'deployments' ? 'active' : ''}`}>
+                                <span className="item-icon">🚀</span>
+                                <span className="item-name">Deployments</span>
+                            </li>
+                            <li className={`sidebar-item ${activeTab === 'task-manager' ? 'active' : ''}`}>
+                                <span className="item-icon">🔄</span>
+                                <span className="item-name">Task Manager</span>
+                            </li>
+                            <li className={`sidebar-item ${activeTab === 'history' ? 'active' : ''}`}>
+                                <span className="item-icon">📈</span>
+                                <span className="item-name">History</span>
+                            </li>
+                        </ul>
+                    </nav>
+
+                    {/* Main Content */}
+                    <main className="main-content">
+                        {/* Tab Navigation */}
+                        <div className="tab-navigation">
+                            <button 
+                                className={`tab-button ${activeTab === 'strategies' ? 'active' : ''}`} 
+                                onClick={() => setActiveTab('strategies')}
+                            >
+                                📊 Strategies
+                            </button>
+                            <button 
+                                className={`tab-button ${activeTab === 'deployments' ? 'active' : ''}`} 
+                                onClick={() => setActiveTab('deployments')}
+                            >
+                                🚀 Deployments
+                            </button>
+                            <button 
+                                className={`tab-button ${activeTab === 'task-manager' ? 'active' : ''}`} 
+                                onClick={() => setActiveTab('task-manager')}
+                            >
+                                🔄 Task Manager
+                            </button>
+                            <button 
+                                className={`tab-button ${activeTab === 'history' ? 'active' : ''}`} 
+                                onClick={() => setActiveTab('history')}
+                            >
+                                📈 History
+                            </button>
+                        </div>
+
+                        {/* Strategies Tab */}
+                        {activeTab === 'strategies' && (
+                            <div className="strategy-config">
+                                <div className="config-header">
+                                    <h2>Strategies</h2>
+                                </div>
+                                
+                                <div className="config-panels">
+                                    {/* Left Panel - Strategy List */}
+                                    <div className="config-panel strategy-list">
+                                        <div className="panel-header">
+                                            <h3>Strategy</h3>
+                                        </div>
+                                        <div className="strategy-items">
+                                            {strategies.map(strategy => (
+                                                <div
+                                                    key={strategy.id}
+                                                    className={`strategy-item ${selectedStrategy && selectedStrategy.id === strategy.id ? 'selected' : ''}`}
+                                                    onClick={() => setSelectedStrategy(strategy)}
+                                                >
+                                                    <div className="strategy-content">
+                                                        <span className="strategy-icon">📋</span>
+                                                        <span className="strategy-name">{strategy.name}</span>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* Middle Panel - Strategy Details */}
+                                    <div className="config-panel strategy-details">
+                                        <div className="panel-header">
+                                            <h3>{selectedStrategy ? selectedStrategy.name : 'Select a Strategy'}</h3>
+                                        </div>
+                                        <div className="strategy-content">
+                                            <div className="tickers-input-group">
+                                                <label htmlFor="tickers-input">Tickers:</label>
+                                                <input
+                                                    type="text"
+                                                    id="tickers-input"
+                                                    value={selectedStrategy ? (selectedStrategy.tickers || '') : ''}
+                                                    onChange={(e) => {
+                                                        if (selectedStrategy) {
+                                                            setSelectedStrategy({...selectedStrategy, tickers: e.target.value});
+                                                        }
+                                                    }}
+                                                    placeholder="Enter tickers (e.g., AAPL, TSLA, SPY)"
+                                                    className="tickers-input"
+                                                />
+                                            </div>
+                                            
+                                            <button 
+                                                className="btn-deploy" 
+                                                onClick={() => selectedStrategy ? deployStrategy(selectedStrategy) : null}
+                                                disabled={!connectionStatus.connected || !selectedStrategy || !selectedStrategy.tickers || selectedStrategy.tickers.trim() === '' || selectedAccounts.filter(acc => acc.selected).length === 0}
+                                            >
+                                                Deploy
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {/* Right Panel - Mode and Account */}
+                                    <div className="config-panel mode-account">
+                                        <div className="panel-header">
+                                            <h3>Mode & Account</h3>
+                                        </div>
+                                        
+                                        {/* Connection Status */}
+                                        <div className="connection-status">
+                                            <div className={`status-indicator ${connectionStatus.connected ? 'connected' : 'disconnected'}`}>
+                                                {connectionStatus.connected ? '🟢' : '🔴'} {connectionStatus.connected ? 'Connected' : 'Disconnected'}
+                                                {connectionStatus.connected && (
+                                                    <>
+                                                        <span className="connection-type">({connectionStatus.type})</span>
+                                                        <span className="connection-port">- Port {connectionStatus.port}</span>
+                                                    </>
+                                                )}
+                                            </div>
+                                            <div className="connection-controls">
+                                                <button 
+                                                    className="btn-connect" 
+                                                    onClick={() => connectToIBKR(true)}
+                                                    disabled={isLoadingAccounts || connectionStatus.connected}
+                                                >
+                                                    {isLoadingAccounts ? 'Connecting...' : 'Connect to Paper (Port 7497)'}
+                                                </button>
+                                                <button 
+                                                    className="btn-connect" 
+                                                    onClick={() => connectToIBKR(false)}
+                                                    disabled={isLoadingAccounts || connectionStatus.connected}
+                                                >
+                                                    {isLoadingAccounts ? 'Connecting...' : 'Connect to Live (Port 7496)'}
+                                                </button>
+                                                <button 
+                                                    className="btn-disconnect" 
+                                                    onClick={disconnectFromIBKR}
+                                                    disabled={!connectionStatus.connected || isLoadingAccounts}
+                                                >
+                                                    Disconnect
+                                                </button>
+                                            </div>
+                                        </div>
+                                        
+                                        <div className="account-selection">
+                                            <label>Accounts ({selectedAccounts.filter(acc => acc.selected).length} selected)</label>
+                                            <div className="account-dropdown">
+                                                <div className="selected-accounts">
+                                                    {!connectionStatus.connected ? (
+                                                        <span className="not-connected">Not connected to IBKR</span>
+                                                    ) : selectedAccounts.filter(acc => acc.selected).length > 0 ? (
+                                                        selectedAccounts.filter(acc => acc.selected).map(acc => acc.name).join(', ')
+                                                    ) : (
+                                                        'No accounts selected'
+                                                    )}
+                                                </div>
+                                                <div className="dropdown-content">
+                                                    {!connectionStatus.connected ? (
+                                                        <div className="not-connected-message">Please connect to IBKR first</div>
+                                                    ) : isLoadingAccounts ? (
+                                                        <div className="loading-accounts">Loading accounts...</div>
+                                                    ) : selectedAccounts.length > 0 ? (
+                                                        selectedAccounts.map(account => (
+                                                            <label key={account.id} className="account-option">
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={account.selected}
+                                                                    onChange={() => {
+                                                                        setSelectedAccounts(prev => prev.map(acc => 
+                                                                            acc.id === account.id ? { ...acc, selected: !acc.selected } : acc
+                                                                        ));
+                                                                    }}
+                                                                />
+                                                                <span className={`account-name ${account.type}`}>
+                                                                    {account.name}
+                                                                </span>
+                                                            </label>
+                                                        ))
+                                                    ) : (
+                                                        <div className="no-accounts">No accounts available</div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Deployments Tab */}
+                        {activeTab === 'deployments' && (
+                            <div className="deployment-section">
+                                <h3>🚀 Deploy Strategy</h3>
+                                <p className="deployment-note">Select a strategy from the Strategies tab first, then use the deploy button there to deploy it.</p>
+                                
+                                <div className="deployment-info">
+                                    <h4>📋 Deployment Information</h4>
+                                    <div className="info-grid">
+                                        <div className="info-item">
+                                            <span className="info-label">Selected Strategy:</span>
+                                            <span className="info-value">
+                                                {selectedStrategy ? selectedStrategy.name : 'None selected'}
+                                            </span>
+                                        </div>
+                                        <div className="info-item">
+                                            <span className="info-label">Tickers:</span>
+                                            <span className="info-value">
+                                                {selectedStrategy && selectedStrategy.tickers ? selectedStrategy.tickers : 'Not set'}
+                                            </span>
+                                        </div>
+                                        <div className="info-item">
+                                            <span className="info-label">Selected Accounts:</span>
+                                            <span className="info-value">
+                                                {selectedAccounts.filter(acc => acc.selected).length > 0 
+                                                    ? selectedAccounts.filter(acc => acc.selected).map(acc => acc.name).join(', ')
+                                                    : 'None selected'
+                                                }
+                                            </span>
+                                        </div>
+                                        <div className="info-item">
+                                            <span className="info-label">Trading Mode:</span>
+                                            <span className="info-value">
+                                                {connectionStatus.connected ? (connectionStatus.type === 'paper' ? '📝 Paper Trading' : '💰 Live Trading') : 'Not connected'}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Task Manager Tab */}
+                        {activeTab === 'task-manager' && (
+                            <div className="task-manager-dashboard">
+                                <div className="dashboard-header">
+                                    <h3>🔄 Task Manager Dashboard</h3>
+                                    <div className="dashboard-stats">
+                                        <div className="stat-item">
+                                            <span className="stat-label">Total Running:</span>
+                                            <span className="stat-value">{runningTasks.total_running || 0}</span>
+                                        </div>
+                                        <div className="stat-item">
+                                            <span className="stat-label">Paper Trading:</span>
+                                            <span className="stat-value">
+                                                {Object.values(runningTasks.tasks || {}).filter(task => task.paper_trading).length}
+                                            </span>
+                                        </div>
+                                        <div className="stat-item">
+                                            <span className="stat-label">Live Trading:</span>
+                                            <span className="stat-value">
+                                                {Object.values(runningTasks.tasks || {}).filter(task => !task.paper_trading).length}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="running-tasks-panel">
+                                    <h4>🔄 Currently Running Strategies</h4>
+                                    <div className="refresh-controls">
+                                        <button 
+                                            className="btn-refresh" 
+                                            onClick={loadRunningTasks}
+                                            title="Refresh running tasks"
+                                        >
+                                            🔄 Refresh
+                                        </button>
+                                    </div>
+                                    <div className="running-tasks-list">
+                                        {Object.keys(runningTasks.tasks || {}).length === 0 ? (
+                                            <div className="no-running-tasks">No strategies currently running</div>
+                                        ) : (
+                                            <div className="running-tasks-grid">
+                                                {Object.entries(runningTasks.tasks || {}).map(([sid, task]) => (
+                                                    <div key={sid} className="running-task-card">
+                                                        <div className="task-header">
+                                                            <span className="task-icon">🔄</span>
+                                                            <span className="task-name">{task.strategy_name}</span>
+                                                            <span className="task-status running">Running</span>
+                                                        </div>
+                                                        <div className="task-details">
+                                                            <div className="task-detail-row">
+                                                                <span className="detail-label">Strategy ID:</span>
+                                                                <span className="detail-value">{task.strategy_id}</span>
+                                                            </div>
+                                                            <div className="task-detail-row">
+                                                                <span className="detail-label">Tickers:</span>
+                                                                <span className="detail-value">{task.tickers && task.tickers.length > 0 ? task.tickers.join(', ') : 'No tickers'}</span>
+                                                            </div>
+                                                            <div className="task-detail-row">
+                                                                <span className="detail-label">Accounts:</span>
+                                                                <span className="detail-value">{task.accounts && task.accounts.length > 0 ? task.accounts.join(', ') : 'No accounts'}</span>
+                                                            </div>
+                                                            <div className="task-detail-row">
+                                                                <span className="detail-label">Trading Mode:</span>
+                                                                <span className="detail-value">{task.paper_trading ? '📝 Paper Trading' : '💰 Live Trading'}</span>
+                                                            </div>
+                                                                                                                         <div className="task-detail-row">
+                                                                 <span className="detail-label">Task ID:</span>
+                                                                 <span className="detail-value">{task.task_id}</span>
+                                                             </div>
+                                                             <div className="task-detail-row">
+                                                                 <span className="detail-label">Process ID:</span>
+                                                                 <span className="detail-value">{task.process_id}</span>
+                                                             </div>
+                                                        </div>
+                                                        <div className="task-actions">
+                                                            <button 
+                                                                className="btn-stop-task"
+                                                                onClick={() => {
+                                                                    console.log('Stop button clicked for task:', task);
+                                                                    console.log('Task strategy_id:', task.strategy_id);
+                                                                    if (task.strategy_id) {
+                                                                        stopTask(task.strategy_id);
+                                                                    } else {
+                                                                        alert('Error: Strategy ID not found in task data');
+                                                                    }
+                                                                }}
+                                                                title="Stop this strategy"
+                                                            >
+                                                                ⏹️ Stop Strategy
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* History Tab */}
+                        {activeTab === 'history' && (
+                            <div className="deployment-history-section">
+                                <h3>📊 Deployment History</h3>
+                                
+                                {deployments.length === 0 ? (
+                                    <div className="no-deployments">
+                                        <p>No deployment history found.</p>
+                                    </div>
+                                ) : (
+                                    <div className="deployment-history-container">
+                                        <table className="deployment-history-table">
+                                                                                         <thead>
+                                                 <tr>
+                                                     <th>Strategy</th>
+                                                     <th>Status</th>
+                                                     <th>Deployment ID</th>
+                                                     <th>Strategy ID</th>
+                                                     <th>Tickers</th>
+                                                     <th>Accounts</th>
+                                                     <th>Trading Mode</th>
+                                                     <th>Started</th>
+                                                     <th>Task ID</th>
+                                                     <th>Process ID</th>
+                                                     <th>Actions</th>
+                                                 </tr>
+                                             </thead>
+                                            <tbody>
+                                                {deployments.map(deployment => (
+                                                    <tr key={deployment.id} className={`deployment-row ${deployment.status}`}>
+                                                        <td className="deployment-strategy">{deployment.strategy_name}</td>
+                                                        <td>
+                                                            <span className={`deployment-status ${deployment.status}`}>
+                                                                {deployment.status === 'running' ? '🟢 Running' : '🔴 Stopped'}
+                                                            </span>
+                                                        </td>
+                                                        <td>{deployment.id}</td>
+                                                        <td>{deployment.strategy_id}</td>
+                                                        <td className="deployment-tickers">{deployment.tickers || 'No tickers'}</td>
+                                                        <td className="deployment-accounts">{deployment.accounts && deployment.accounts.length > 0 ? deployment.accounts.join(', ') : 'No accounts'}</td>
+                                                        <td>{deployment.paper_trading ? '📝 Paper Trading' : '💰 Live Trading'}</td>
+                                                                                                                 <td className="deployment-time">{new Date(deployment.deployed_at).toLocaleString()}</td>
+                                                         <td>
+                                                             {runningTasks.tasks && runningTasks.tasks[deployment.strategy_id] ? 
+                                                                 runningTasks.tasks[deployment.strategy_id].task_id || 'N/A' : 
+                                                                 'N/A'
+                                                             }
+                                                         </td>
+                                                         <td>
+                                                             {runningTasks.tasks && runningTasks.tasks[deployment.strategy_id] ? 
+                                                                 runningTasks.tasks[deployment.strategy_id].process_id || 'N/A' : 
+                                                                 'N/A'
+                                                             }
+                                                         </td>
+                                                         <td className="deployment-actions">
+                                                            <button 
+                                                                className="btn-see-log"
+                                                                onClick={() => viewDeploymentLogs(deployment.strategy_id)}
+                                                                title="View strategy logs"
+                                                            >
+                                                                📋 Logs
+                                                            </button>
+                                                            {deployment.status === 'running' ? (
+                                                                <button 
+                                                                    className="btn-stop-strategy"
+                                                                    onClick={() => {
+                                                                        console.log('Stop button clicked for deployment:', deployment);
+                                                                        console.log('Strategy ID to stop:', deployment.strategy_id);
+                                                                        stopTask(deployment.strategy_id);
+                                                                    }}
+                                                                    title="Stop this strategy"
+                                                                >
+                                                                    ⏹️ Stop
+                                                                </button>
+                                                            ) : (
+                                                                <button 
+                                                                    className="btn-start-strategy"
+                                                                    onClick={() => startStrategy(deployment.strategy_id)}
+                                                                    title="Start this strategy"
+                                                                >
+                                                                    ▶️ Start
+                                                                </button>
+                                                            )}
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </main>
+                </div>
+            );
+        }
+        
+        console.log('About to render OptionsTraderApp...');
+        const rootElement = document.getElementById('root');
+        console.log('Root element:', rootElement);
+        
+        if (rootElement) {
+            ReactDOM.render(<OptionsTraderApp />, rootElement);
+            console.log('OptionsTraderApp rendered successfully!');
+        } else {
+            console.error('Root element not found!');
+        }
+    </script>
+</body>
+</html>
