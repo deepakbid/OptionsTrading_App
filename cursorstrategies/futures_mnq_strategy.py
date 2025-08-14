@@ -1,16 +1,13 @@
-"""
-Futures MNQ Strategy (ib_async, CLI-integrated, LIMIT ORDERS ONLY, NBBO required)
+# 🎯 MNQ Futures Trading Strategy
+# Last updated: 2025-08-14
+# Strategy: Place limit orders and close based on stop loss/take profit
+# Contract: MNQ September 2025 (202509)
 
-Key fixes:
-- NEVER call IB.sleep() while the CLI loop is running → use asyncio.sleep(...)
-- When adopting an existing MNQ position, convert avgCost to a *price* by dividing by the
-  contract multiplier (MNQ multiplier is 2). Controlled by param: avg_cost_is_price (default True).
-
-CLI params (examples):
-  --params expiry=202509,limit_offset=0.25,stop_loss_points=5.0,take_profit_mult=2.0,
-           use_delayed=false,tif=DAY,limit_timeout=30,max_runtime_sec=300,close_after_sec=10,
-           avg_cost_is_price=true
 """
+MNQ Futures Trading Strategy
+Implements a simple futures trading strategy for MNQ contracts
+"""
+
 from datetime import datetime
 from typing import Optional, Tuple, List, Dict, Any
 import asyncio
@@ -465,7 +462,7 @@ class FuturesMNQStrategy(Strategy):
             await self._close_position_limit(acct, log)
             return True
         return False
-
+ 
     # ------------------------------ Cleanup & Summary ------------------------------
 
     async def _cleanup(self, log):

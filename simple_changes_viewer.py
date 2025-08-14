@@ -31,9 +31,12 @@ class SimpleChangesViewer:
     def get_git_status(self) -> Dict:
         """Get current Git status"""
         try:
+            # Use full path to git.exe since PATH might not be updated in server process
+            git_path = r"C:\Program Files\Git\bin\git.exe"
+            
             # Check if Git is available
             result = subprocess.run(
-                ["git", "status", "--porcelain"],
+                [git_path, "status", "--porcelain"],
                 capture_output=True,
                 text=True,
                 cwd=self.repo_path
@@ -73,8 +76,9 @@ class SimpleChangesViewer:
     def get_file_diff(self, filename: str) -> Optional[str]:
         """Get diff for a specific file"""
         try:
+            git_path = r"C:\Program Files\Git\bin\git.exe"
             result = subprocess.run(
-                ["git", "diff", filename],
+                [git_path, "diff", filename],
                 capture_output=True,
                 text=True,
                 cwd=self.repo_path
@@ -90,8 +94,9 @@ class SimpleChangesViewer:
     def get_commit_history(self, limit: int = 10) -> List[Dict]:
         """Get recent commit history"""
         try:
+            git_path = r"C:\Program Files\Git\bin\git.exe"
             result = subprocess.run(
-                ["git", "log", f"--max-count={limit}", "--pretty=format:%H|%an|%ad|%s", "--date=short"],
+                [git_path, "log", f"--max-count={limit}", "--pretty=format:%H|%an|%ad|%s", "--date=short"],
                 capture_output=True,
                 text=True,
                 cwd=self.repo_path
@@ -181,10 +186,10 @@ async def health_check():
 
 if __name__ == "__main__":
     print("🚀 Starting Simple Changes Viewer...")
-    print("📱 Open your browser and go to: http://localhost:8000")
-    print("📝 View Git changes at: http://localhost:8000")
-    print("🔌 Health check at: http://localhost:8000/health")
-    print("📚 API docs at: http://localhost:8000/docs")
+    print("📱 Open your browser and go to: http://localhost:8001")
+    print("📝 View Git changes at: http://localhost:8001")
+    print("🔌 Health check at: http://localhost:8001/health")
+    print("📚 API docs at: http://localhost:8001/docs")
     print("\nPress Ctrl+C to stop the server")
     
-    uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run(app, host="0.0.0.0", port=8001)
